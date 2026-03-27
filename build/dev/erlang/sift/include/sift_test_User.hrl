@@ -1,5 +1,0 @@
--record(user, {
-    name :: binary(),
-    age :: integer(),
-    email :: gleam@option:option(binary())
-}).

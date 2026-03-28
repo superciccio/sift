@@ -47,3 +47,19 @@ pub fn positive(msg: String) -> fn(Float) -> Result(Float, String) {
     }
   }
 }
+
+/// Value must be >= 0.0.
+///
+/// ```gleam
+/// let validator = float.non_negative("must be >= 0")
+/// validator(0.0)   // -> Ok(0.0)
+/// validator(-0.1)  // -> Error("must be >= 0")
+/// ```
+pub fn non_negative(msg: String) -> fn(Float) -> Result(Float, String) {
+  fn(value) {
+    case float.compare(value, 0.0) {
+      order.Lt -> Error(msg)
+      _ -> Ok(value)
+    }
+  }
+}

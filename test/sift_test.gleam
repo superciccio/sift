@@ -1,3 +1,4 @@
+import gleam/int
 import gleam/option.{type Option, None, Some}
 import gleeunit
 import sift
@@ -81,6 +82,164 @@ pub fn custom_validator_test() {
   let assert Error("must be even") = even(3)
 }
 
+// --- check_all ---
+
+pub fn check_all_all_pass_test() {
+  let result = {
+    use name <- sift.check_all("name", "Alice", [
+      s.non_empty("required"),
+      s.min_length(3, "too short"),
+      s.max_length(50, "too long"),
+    ])
+    sift.ok(name)
+  }
+  let assert Ok("Alice") = sift.validate(result)
+}
+
+pub fn check_all_multiple_fail_test() {
+  let result = {
+    use name <- sift.check_all("name", "", [
+      s.non_empty("required"),
+      s.min_length(3, "too short"),
+    ])
+    sift.ok(name)
+  }
+  let assert Error(errors) = sift.validate(result)
+  let assert 2 = length(errors)
+}
+
+pub fn check_all_partial_fail_test() {
+  let result = {
+    use name <- sift.check_all("name", "ab", [
+      s.non_empty("required"),
+      s.min_length(3, "too short"),
+      s.max_length(50, "too long"),
+    ])
+    sift.ok(name)
+  }
+  let assert Error([sift.FieldError(path: ["name"], message: "too short")]) =
+    sift.validate(result)
+}
+
+// --- when ---
+
+pub fn when_true_passes_test() {
+  let v = sift.when(True, s.non_empty("required"))
+  let assert Ok("hello") = v("hello")
+}
+
+pub fn when_true_fails_test() {
+  let v = sift.when(True, s.non_empty("required"))
+  let assert Error("required") = v("")
+}
+
+pub fn when_false_skips_test() {
+  let v = sift.when(False, s.non_empty("required"))
+  let assert Ok("") = v("")
+}
+
+pub fn when_in_check_test() {
+  let result = {
+    use state <- sift.check("state", "", sift.when(True, s.non_empty("required")))
+    sift.ok(state)
+  }
+  let assert Error([sift.FieldError(path: ["state"], message: "required")]) =
+    sift.validate(result)
+}
+
+pub fn when_false_in_check_test() {
+  let result = {
+    use state <- sift.check("state", "", sift.when(False, s.non_empty("required")))
+    sift.ok(state)
+  }
+  let assert Ok("") = sift.validate(result)
+}
+
+// --- check_optional ---
+
+pub fn check_optional_none_skips_test() {
+  let result = {
+    use nickname <- sift.check_optional("nickname", None, s.min_length(2, "too short"))
+    sift.ok(nickname)
+  }
+  let assert Ok(None) = sift.validate(result)
+}
+
+pub fn check_optional_some_valid_test() {
+  let result = {
+    use nickname <- sift.check_optional("nickname", Some("Al"), s.min_length(2, "too short"))
+    sift.ok(nickname)
+  }
+  let assert Ok(Some("Al")) = sift.validate(result)
+}
+
+pub fn check_optional_some_invalid_test() {
+  let result = {
+    use nickname <- sift.check_optional("nickname", Some("A"), s.min_length(2, "too short"))
+    sift.ok(nickname)
+  }
+  let assert Error([sift.FieldError(path: ["nickname"], message: "too short")]) =
+    sift.validate(result)
+}
+
+// --- check_parse ---
+
+pub fn check_parse_valid_test() {
+  let result = {
+    use age <- sift.check_parse("age", "42", int.parse, 0, "must be a number")
+    sift.ok(age)
+  }
+  let assert Ok(42) = sift.validate(result)
+}
+
+pub fn check_parse_invalid_test() {
+  let result = {
+    use age <- sift.check_parse("age", "abc", int.parse, 0, "must be a number")
+    sift.ok(age)
+  }
+  let assert Error([sift.FieldError(path: ["age"], message: "must be a number")]) =
+    sift.validate(result)
+}
+
+pub fn check_parse_then_validate_test() {
+  // Parse string to int, then validate the int
+  let result = {
+    use age <- sift.check_parse("age", "42", int.parse, 0, "must be a number")
+    use age <- sift.check("age", age, i.positive("must be positive"))
+    sift.ok(age)
+  }
+  let assert Ok(42) = sift.validate(result)
+}
+
+pub fn check_parse_fail_then_validate_still_runs_test() {
+  // Parse fails, but subsequent checks on other fields still accumulate
+  let result = {
+    use age <- sift.check_parse("age", "abc", int.parse, 0, "must be a number")
+    use name <- sift.check("name", "", s.non_empty("required"))
+    sift.ok(#(age, name))
+  }
+  let assert Error(errors) = sift.validate(result)
+  let assert 2 = length(errors)
+}
+
+pub fn check_parse_in_form_scenario_test() {
+  // Simulating a form: all fields come as strings
+  let form_name = "Alice"
+  let form_age = "30"
+  let form_score = "not_a_number"
+
+  let result = {
+    use name <- sift.check("name", form_name, s.non_empty("required"))
+    use age <- sift.check_parse("age", form_age, int.parse, 0, "must be a number")
+    use age <- sift.check("age", age, i.between(0, 150, "out of range"))
+    use score <- sift.check_parse("score", form_score, int.parse, 0, "must be a number")
+    sift.ok(#(name, age, score))
+  }
+  let assert Error(errors) = sift.validate(result)
+  // Only score fails to parse
+  let assert 1 = length(errors)
+}
+
 // --- String ---
 
 pub fn string_min_length_test() {
@@ -134,6 +293,33 @@ pub fn string_contains_test() {
     s.contains("lo wo", "must contain lo wo")("goodbye")
 }
 
+pub fn string_numeric_test() {
+  let assert Ok("123") = s.numeric("digits only")("123")
+  let assert Error("digits only") = s.numeric("digits only")("12a")
+  let assert Error("digits only") = s.numeric("digits only")("")
+}
+
+pub fn string_alpha_test() {
+  let assert Ok("abc") = s.alpha("letters only")("abc")
+  let assert Ok("ABC") = s.alpha("letters only")("ABC")
+  let assert Error("letters only") = s.alpha("letters only")("abc1")
+  let assert Error("letters only") = s.alpha("letters only")("")
+}
+
+pub fn string_alphanumeric_test() {
+  let assert Ok("abc123") = s.alphanumeric("alphanumeric only")("abc123")
+  let assert Error("alphanumeric only") = s.alphanumeric("alphanumeric only")("abc 123")
+  let assert Error("alphanumeric only") = s.alphanumeric("alphanumeric only")("")
+}
+
+pub fn string_trimmed_test() {
+  let assert Ok("hello") = s.trimmed("no whitespace")("hello")
+  let assert Ok("hello world") = s.trimmed("no whitespace")("hello world")
+  let assert Error("no whitespace") = s.trimmed("no whitespace")(" hello")
+  let assert Error("no whitespace") = s.trimmed("no whitespace")("hello ")
+  let assert Error("no whitespace") = s.trimmed("no whitespace")(" hello ")
+}
+
 // --- Int ---
 
 pub fn int_min_test() {
@@ -169,6 +355,18 @@ pub fn int_one_of_test() {
   let assert Error("invalid") = i.one_of([1, 2, 3], "invalid")(4)
 }
 
+pub fn int_negative_test() {
+  let assert Ok(-1) = i.negative("must be negative")(-1)
+  let assert Error("must be negative") = i.negative("must be negative")(0)
+  let assert Error("must be negative") = i.negative("must be negative")(1)
+}
+
+pub fn int_divisible_by_test() {
+  let assert Ok(9) = i.divisible_by(3, "must be divisible by 3")(9)
+  let assert Ok(0) = i.divisible_by(3, "must be divisible by 3")(0)
+  let assert Error("must be divisible by 3") = i.divisible_by(3, "must be divisible by 3")(7)
+}
+
 // --- Float ---
 
 pub fn float_min_test() {
@@ -190,6 +388,12 @@ pub fn float_positive_test() {
   let assert Ok(0.1) = f.positive("must be positive")(0.1)
   let assert Error("must be positive") = f.positive("must be positive")(0.0)
   let assert Error("must be positive") = f.positive("must be positive")(-1.0)
+}
+
+pub fn float_non_negative_test() {
+  let assert Ok(0.0) = f.non_negative("must be >= 0")(0.0)
+  let assert Ok(1.5) = f.non_negative("must be >= 0")(1.5)
+  let assert Error("must be >= 0") = f.non_negative("must be >= 0")(-0.1)
 }
 
 // --- List ---

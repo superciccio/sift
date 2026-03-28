@@ -131,6 +131,55 @@ pub fn uuid(msg: String) -> fn(String) -> Result(String, String) {
   )
 }
 
+/// All characters must be digits (0-9).
+///
+/// ```gleam
+/// let validator = string.numeric("digits only")
+/// validator("123")   // -> Ok("123")
+/// validator("12a")   // -> Error("digits only")
+/// ```
+pub fn numeric(msg: String) -> fn(String) -> Result(String, String) {
+  matches("^[0-9]+$", msg)
+}
+
+/// All characters must be letters (a-zA-Z).
+///
+/// ```gleam
+/// let validator = string.alpha("letters only")
+/// validator("abc")   // -> Ok("abc")
+/// validator("abc1")  // -> Error("letters only")
+/// ```
+pub fn alpha(msg: String) -> fn(String) -> Result(String, String) {
+  matches("^[a-zA-Z]+$", msg)
+}
+
+/// All characters must be letters or digits.
+///
+/// ```gleam
+/// let validator = string.alphanumeric("alphanumeric only")
+/// validator("abc123")  // -> Ok("abc123")
+/// validator("abc 123") // -> Error("alphanumeric only")
+/// ```
+pub fn alphanumeric(msg: String) -> fn(String) -> Result(String, String) {
+  matches("^[a-zA-Z0-9]+$", msg)
+}
+
+/// String must have no leading or trailing whitespace.
+///
+/// ```gleam
+/// let validator = string.trimmed("no surrounding spaces")
+/// validator("hello")   // -> Ok("hello")
+/// validator(" hello")  // -> Error("no surrounding spaces")
+/// ```
+pub fn trimmed(msg: String) -> fn(String) -> Result(String, String) {
+  fn(value) {
+    case string.trim(value) == value {
+      True -> Ok(value)
+      False -> Error(msg)
+    }
+  }
+}
+
 fn list_contains(items: List(String), target: String) -> Bool {
   case items {
     [] -> False

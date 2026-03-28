@@ -2,6 +2,7 @@
 
 import gleam/int
 import gleam/list
+import gleam/option.{type Option, None, Some}
 
 /// A validation error with path to the field and a human-readable message.
 ///
@@ -169,7 +170,13 @@ pub fn not(
   }
 }
 
-/// Value must equal the expected value
+/// Value must equal the expected value.
+///
+/// ```gleam
+/// let validator = sift.equals("yes", "must accept terms")
+/// validator("yes")  // -> Ok("yes")
+/// validator("no")   // -> Error("must accept terms")
+/// ```
 pub fn equals(expected: a, msg: String) -> Validator(a) {
   fn(value) {
     case value == expected {
@@ -179,7 +186,114 @@ pub fn equals(expected: a, msg: String) -> Validator(a) {
   }
 }
 
-/// Escape hatch for user-defined checks
+/// Run multiple validators on a field, accumulate all errors.
+///
+/// ```gleam
+/// use name <- sift.check_all("name", input.name, [
+///   s.non_empty("required"),
+///   s.min_length(3, "too short"),
+///   s.max_length(100, "too long"),
+/// ])
+/// sift.ok(name)
+/// ```
+pub fn check_all(
+  field: String,
+  value: a,
+  validators: List(Validator(a)),
+  next: fn(a) -> Validated(b),
+) -> Validated(b) {
+  let field_errors =
+    validators
+    |> list.filter_map(fn(v) {
+      case v(value) {
+        Ok(_) -> Error(Nil)
+        Error(msg) -> Ok(FieldError(path: [field], message: msg))
+      }
+    })
+  let #(result, outer_errors) = next(value)
+  #(result, list.append(field_errors, outer_errors))
+}
+
+/// Conditional validator — runs the validator only when condition is True.
+///
+/// ```gleam
+/// use state <- sift.check("state", input.state,
+///   sift.when(country == "US", s.non_empty("required")))
+/// ```
+pub fn when(condition: Bool, validator: Validator(a)) -> Validator(a) {
+  fn(value) {
+    case condition {
+      True -> validator(value)
+      False -> Ok(value)
+    }
+  }
+}
+
+/// Validate an Option value only when Some, skip when None.
+///
+/// ```gleam
+/// use nickname <- sift.check_optional("nickname", input.nickname,
+///   s.min_length(2, "too short"))
+/// sift.ok(User(nickname:))
+/// ```
+pub fn check_optional(
+  field: String,
+  value: Option(a),
+  validator: Validator(a),
+  next: fn(Option(a)) -> Validated(b),
+) -> Validated(b) {
+  case value {
+    None -> next(None)
+    Some(v) ->
+      case validator(v) {
+        Ok(_) -> next(Some(v))
+        Error(msg) -> {
+          let #(result, errors) = next(Some(v))
+          #(result, [FieldError(path: [field], message: msg), ..errors])
+        }
+      }
+  }
+}
+
+/// Parse a raw value and feed the result into the chain.
+/// On success, passes the parsed value to next.
+/// On failure, records a FieldError and passes the default to next
+/// so that subsequent fields still validate.
+///
+/// ```gleam
+/// use age <- sift.check_parse("age", "42", int.parse, 0, "must be a number")
+/// use age <- sift.check("age", age, i.min(13, "must be at least 13"))
+/// sift.ok(age)
+/// ```
+pub fn check_parse(
+  field: String,
+  value: a,
+  parser: fn(a) -> Result(b, c),
+  default: b,
+  msg: String,
+  next: fn(b) -> Validated(d),
+) -> Validated(d) {
+  case parser(value) {
+    Ok(parsed) -> next(parsed)
+    Error(_) -> {
+      let #(result, errors) = next(default)
+      #(result, [FieldError(path: [field], message: msg), ..errors])
+    }
+  }
+}
+
+/// Escape hatch for user-defined checks.
+///
+/// ```gleam
+/// let even = sift.custom(fn(n: Int) {
+///   case n % 2 == 0 {
+///     True -> Ok(n)
+///     False -> Error("must be even")
+///   }
+/// })
+/// even(4)  // -> Ok(4)
+/// even(3)  // -> Error("must be even")
+/// ```
 pub fn custom(f: fn(a) -> Result(a, String)) -> Validator(a) {
   f
 }

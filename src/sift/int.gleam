@@ -66,6 +66,38 @@ pub fn one_of(values: List(Int), msg: String) -> fn(Int) -> Result(Int, String) 
   }
 }
 
+/// Value must be < 0.
+///
+/// ```gleam
+/// let validator = int.negative("must be negative")
+/// validator(-1)  // -> Ok(-1)
+/// validator(0)   // -> Error("must be negative")
+/// ```
+pub fn negative(msg: String) -> fn(Int) -> Result(Int, String) {
+  fn(value) {
+    case value < 0 {
+      True -> Ok(value)
+      False -> Error(msg)
+    }
+  }
+}
+
+/// Value must be divisible by n.
+///
+/// ```gleam
+/// let validator = int.divisible_by(3, "must be divisible by 3")
+/// validator(9)  // -> Ok(9)
+/// validator(7)  // -> Error("must be divisible by 3")
+/// ```
+pub fn divisible_by(n: Int, msg: String) -> fn(Int) -> Result(Int, String) {
+  fn(value) {
+    case value % n == 0 {
+      True -> Ok(value)
+      False -> Error(msg)
+    }
+  }
+}
+
 fn list_contains(items: List(Int), target: Int) -> Bool {
   case items {
     [] -> False

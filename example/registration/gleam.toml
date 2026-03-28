@@ -1,0 +1,10 @@
+name = "registration"
+version = "1.0.0"
+description = "Example: form-based registration using sift with raw string parsing"
+
+[dependencies]
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+sift = { path = "../../" }
+
+[dev_dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"

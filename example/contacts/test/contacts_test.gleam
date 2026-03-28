@@ -8,7 +8,7 @@ pub fn main() -> Nil {
 }
 
 fn valid_address() {
-  AddressInput(street: "123 Main St", city: "Springfield", zip: "62704")
+  AddressInput(street: "123 Main St", city: "Springfield", zip: "62704", state: "IL", country: "US")
 }
 
 fn valid_input() {
@@ -17,6 +17,7 @@ fn valid_input() {
     email: "alice@example.com",
     age: 30,
     phone: Some("555-1234"),
+    website: None,
     tags: ["friend", "work"],
     address: valid_address(),
   )
@@ -30,8 +31,9 @@ pub fn create_valid_contact_test() {
     email: "alice@example.com",
     age: 30,
     phone: Some("555-1234"),
+    website: None,
     tags: ["friend", "work"],
-    address: Address(street: "123 Main St", city: "Springfield", zip: "62704"),
+    address: Address(street: "123 Main St", city: "Springfield", zip: "62704", state: "IL", country: "US"),
   )) = contacts.create(valid_input())
 }
 
@@ -60,16 +62,34 @@ pub fn name_too_long_test() {
   assert_has_error(errors, ["name"], "too long")
 }
 
+// check_all: name with leading space gets trimmed error
+pub fn name_untrimmed_test() {
+  let input = ContactInput(..valid_input(), name: " Alice")
+  let assert Error(errors) = contacts.create(input)
+  assert_has_error(errors, ["name"], "must not have leading/trailing spaces")
+}
+
+// check_all: empty name hits both required AND trimmed won't fire (empty is trimmed)
+// but it does hit required
+pub fn name_check_all_accumulates_test() {
+  let long = " " <> string_of_length(101)
+  let input = ContactInput(..valid_input(), name: long)
+  let assert Error(errors) = contacts.create(input)
+  // Both trimmed and too long should fire
+  assert_has_error(errors, ["name"], "must not have leading/trailing spaces")
+  assert_has_error(errors, ["name"], "too long")
+}
+
 pub fn empty_email_test() {
   let input = ContactInput(..valid_input(), email: "")
   let assert Error(errors) = contacts.create(input)
   assert_has_error(errors, ["email"], "required")
 }
 
-pub fn email_missing_at_test() {
+pub fn email_invalid_test() {
   let input = ContactInput(..valid_input(), email: "alice.example.com")
   let assert Error(errors) = contacts.create(input)
-  assert_has_error(errors, ["email"], "must contain @")
+  assert_has_error(errors, ["email"], "invalid email")
 }
 
 pub fn age_negative_test() {
@@ -106,6 +126,51 @@ pub fn empty_tag_test() {
   assert_has_error(errors, ["tags", "1"], "empty tag")
 }
 
+// --- check_optional (phone & website) ---
+
+pub fn phone_none_skips_validation_test() {
+  let input = ContactInput(..valid_input(), phone: None)
+  let assert Ok(Contact(phone: None, ..)) = contacts.create(input)
+}
+
+pub fn website_valid_test() {
+  let input = ContactInput(..valid_input(), website: Some("https://example.com"))
+  let assert Ok(Contact(website: Some("https://example.com"), ..)) = contacts.create(input)
+}
+
+pub fn website_none_skips_test() {
+  let input = ContactInput(..valid_input(), website: None)
+  let assert Ok(Contact(website: None, ..)) = contacts.create(input)
+}
+
+pub fn website_invalid_test() {
+  let input = ContactInput(..valid_input(), website: Some("not-a-url"))
+  let assert Error(errors) = contacts.create(input)
+  assert_has_error(errors, ["website"], "invalid url")
+}
+
+// --- Conditional validation (when) ---
+
+pub fn us_address_requires_state_test() {
+  let input =
+    ContactInput(
+      ..valid_input(),
+      address: AddressInput(..valid_address(), country: "US", state: ""),
+    )
+  let assert Error(errors) = contacts.create(input)
+  assert_has_error(errors, ["address", "state"], "required for US")
+}
+
+pub fn non_us_address_skips_state_test() {
+  let input =
+    ContactInput(
+      ..valid_input(),
+      address: AddressInput(..valid_address(), country: "IT", state: ""),
+    )
+  let assert Ok(Contact(address: Address(state: "", country: "IT", ..), ..)) =
+    contacts.create(input)
+}
+
 // --- Nested address errors ---
 
 pub fn address_empty_street_test() {
@@ -125,6 +190,21 @@ pub fn address_bad_zip_test() {
       address: AddressInput(..valid_address(), zip: "abc"),
     )
   let assert Error(errors) = contacts.create(input)
+  // check_all catches both: not numeric AND not 5 digits
+  assert_has_error(errors, ["address", "zip"], "must be digits")
+  assert_has_error(errors, ["address", "zip"], "must be 5 digits")
+}
+
+pub fn address_empty_zip_check_all_test() {
+  let input =
+    ContactInput(
+      ..valid_input(),
+      address: AddressInput(..valid_address(), zip: ""),
+    )
+  let assert Error(errors) = contacts.create(input)
+  // All three zip validators fire
+  assert_has_error(errors, ["address", "zip"], "required")
+  assert_has_error(errors, ["address", "zip"], "must be digits")
   assert_has_error(errors, ["address", "zip"], "must be 5 digits")
 }
 
@@ -137,13 +217,14 @@ pub fn multiple_errors_accumulate_test() {
       email: "bad",
       age: -1,
       phone: Some("x"),
+      website: Some("nope"),
       tags: [""],
-      address: AddressInput(street: "", city: "", zip: "bad"),
+      address: AddressInput(street: "", city: "", zip: "bad", state: "", country: "US"),
     )
   let assert Error(errors) = contacts.create(input)
-  // name, email, age, phone, tags, address.street, address.city, address.zip
-  // Should have at least 8 errors
-  assert list_length(errors) >= 8
+  // name, email(invalid), age, phone, website, tags[0], address.street, address.city,
+  // address.zip(x2), address.state, address.country — lots of errors
+  assert list_length(errors) >= 10
 }
 
 pub fn update_also_validates_test() {

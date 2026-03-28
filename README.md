@@ -50,20 +50,23 @@ validate(UserInput(name: "", email: "nope", age: -1))
 
 - **Error accumulation** — every field is checked, every error is returned
 - **Field paths** — nested structs and lists produce paths like `["address", "zip"]` or `["tags", "0"]`
+- **Multi-validator** — `sift.check_all` runs multiple validators on one field, collects all errors
 - **Composable** — `sift.and`, `sift.or`, `sift.not` to combine validators
+- **Conditional** — `sift.when` runs a validator only when a condition is true
 - **Nested structs** — `sift.nested` with automatic path prefixing
 - **List validation** — `sift.each` with indexed paths
-- **Optional fields** — `sift/option.required` and `sift/option.optional`
+- **Optional fields** — `sift.check_optional`, `sift/option.required`, `sift/option.optional`
+- **Form parsing** — `sift.check_parse` bridges raw strings to typed values
 - **Built-in validators** — strings, ints, floats, lists, options
 
 ## Modules
 
 | Module | Validators |
 |--------|-----------|
-| `sift` | `check`, `nested`, `each`, `ok`, `validate`, `and`, `or`, `not`, `equals`, `custom` |
-| `sift/string` | `min_length`, `max_length`, `length`, `non_empty`, `matches`, `one_of`, `starts_with`, `ends_with`, `contains`, `email`, `url`, `uuid` |
-| `sift/int` | `min`, `max`, `between`, `positive`, `non_negative`, `one_of` |
-| `sift/float` | `min`, `max`, `between`, `positive` |
+| `sift` | `check`, `check_all`, `check_optional`, `check_parse`, `nested`, `each`, `ok`, `validate`, `and`, `or`, `not`, `when`, `equals`, `custom` |
+| `sift/string` | `min_length`, `max_length`, `length`, `non_empty`, `matches`, `one_of`, `starts_with`, `ends_with`, `contains`, `email`, `url`, `uuid`, `numeric`, `alpha`, `alphanumeric`, `trimmed` |
+| `sift/int` | `min`, `max`, `between`, `positive`, `non_negative`, `negative`, `one_of`, `divisible_by` |
+| `sift/float` | `min`, `max`, `between`, `positive`, `non_negative` |
 | `sift/list` | `min_length`, `max_length`, `non_empty` |
 | `sift/option` | `required`, `optional` |
 

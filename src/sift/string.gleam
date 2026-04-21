@@ -38,7 +38,13 @@ pub fn non_empty(msg: String) -> fn(String) -> Result(String, String) {
   min_length(1, msg)
 }
 
-/// String must match the given regex pattern
+/// String must match the given regex pattern.
+///
+/// ```gleam
+/// let validator = string.matches("^[A-Z]{3}$", "must be 3 uppercase letters")
+/// validator("ABC")   // -> Ok("ABC")
+/// validator("abc")   // -> Error("must be 3 uppercase letters")
+/// ```
 pub fn matches(
   pattern: String,
   msg: String,
@@ -55,7 +61,13 @@ pub fn matches(
   }
 }
 
-/// String must be one of the given values
+/// String must be one of the given values.
+///
+/// ```gleam
+/// let validator = string.one_of(["admin", "user", "guest"], "invalid role")
+/// validator("admin")   // -> Ok("admin")
+/// validator("root")    // -> Error("invalid role")
+/// ```
 pub fn one_of(
   values: List(String),
   msg: String,
@@ -118,12 +130,24 @@ pub fn email(msg: String) -> fn(String) -> Result(String, String) {
   matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", msg)
 }
 
-/// Must look like a URL (http:// or https://)
+/// Must look like a URL (http:// or https://).
+///
+/// ```gleam
+/// let validator = string.url("invalid url")
+/// validator("https://example.com")  // -> Ok("https://example.com")
+/// validator("example.com")          // -> Error("invalid url")
+/// ```
 pub fn url(msg: String) -> fn(String) -> Result(String, String) {
   matches("^https?://[^\\s]+$", msg)
 }
 
-/// Must be a valid UUID v4 format
+/// Must be a valid UUID v4 format.
+///
+/// ```gleam
+/// let validator = string.uuid("invalid uuid")
+/// validator("550e8400-e29b-41d4-a716-446655440000")  // -> Ok(..)
+/// validator("not-a-uuid")                            // -> Error("invalid uuid")
+/// ```
 pub fn uuid(msg: String) -> fn(String) -> Result(String, String) {
   matches(
     "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",

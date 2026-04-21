@@ -46,6 +46,13 @@ validate(UserInput(name: "", email: "nope", age: -1))
 // ])
 ```
 
+## Realistic example
+
+For a full walkthrough — nested structs, optional fields, conditional
+validation with `when`, multiple validators per field with `check_all`,
+and per-item list validation with `each` — see
+[`example/contacts/`](example/contacts/src/contacts.gleam).
+
 ## Features
 
 - **Error accumulation** — every field is checked, every error is returned
@@ -54,7 +61,8 @@ validate(UserInput(name: "", email: "nope", age: -1))
 - **Composable** — `sift.and`, `sift.or`, `sift.not` to combine validators
 - **Conditional** — `sift.when` runs a validator only when a condition is true
 - **Nested structs** — `sift.nested` with automatic path prefixing
-- **List validation** — `sift.each` with indexed paths
+- **List validation** — `sift.each` and `sift.check_each` with indexed paths
+- **Cross-field** — `sift.check2` in-chain, `sift.refine` post-assembly
 - **Optional fields** — `sift.check_optional`, `sift/option.required`, `sift/option.optional`
 - **Form parsing** — `sift.check_parse` bridges raw strings to typed values
 - **Built-in validators** — strings, ints, floats, lists, options
@@ -63,7 +71,7 @@ validate(UserInput(name: "", email: "nope", age: -1))
 
 | Module | Validators |
 |--------|-----------|
-| `sift` | `check`, `check_all`, `check_optional`, `check_parse`, `nested`, `each`, `ok`, `validate`, `and`, `or`, `not`, `when`, `equals`, `custom` |
+| `sift` | `check`, `check_all`, `check_optional`, `check_parse`, `check_each`, `check2`, `nested`, `each`, `refine`, `ok`, `validate`, `and`, `or`, `not`, `when`, `equals`, `custom` |
 | `sift/string` | `min_length`, `max_length`, `length`, `non_empty`, `matches`, `one_of`, `starts_with`, `ends_with`, `contains`, `email`, `url`, `uuid`, `numeric`, `alpha`, `alphanumeric`, `trimmed` |
 | `sift/int` | `min`, `max`, `between`, `positive`, `non_negative`, `negative`, `one_of`, `divisible_by` |
 | `sift/float` | `min`, `max`, `between`, `positive`, `non_negative` |

@@ -1,4 +1,29 @@
 //// Core validation functions — check fields, accumulate errors, compose validators.
+////
+//// Build a validator for a struct by chaining `check` calls with `use`,
+//// then finish with `ok` and convert to a `Result` with `validate`. Every
+//// field runs, so a single call returns every error at once — not just the
+//// first.
+////
+//// ```gleam
+//// import sift
+//// import sift/int as i
+//// import sift/string as s
+////
+//// pub type User { User(name: String, email: String, age: Int) }
+////
+//// pub fn validate_user(input: User) -> Result(User, List(sift.FieldError)) {
+////   use name <- sift.check("name", input.name, s.non_empty("required"))
+////   use email <- sift.check("email", input.email, s.email("invalid"))
+////   use age <- sift.check("age", input.age, i.between(0, 150, "out of range"))
+////   sift.ok(User(name:, email:, age:))
+////   |> sift.validate
+//// }
+//// ```
+////
+//// For nested structs use `nested`, for lists use `each`, for multiple
+//// constraints on one field use `check_all`, and for conditional
+//// constraints use `when`. See `example/contacts/` for a full walkthrough.
 
 import gleam/int
 import gleam/list
@@ -279,6 +304,104 @@ pub fn check_parse(
       let #(result, errors) = next(default)
       #(result, [FieldError(path: [field], message: msg), ..errors])
     }
+  }
+}
+
+/// Validate every item in a list with a sub-validator function, prefixing
+/// error paths with the field name and the item's index.
+/// Produces paths like `["tags", "0", "name"]`.
+///
+/// Use this when each item is itself a struct to validate. For a single
+/// `Validator(a)` per item, use `each` instead.
+///
+/// ```gleam
+/// use tags <- sift.check_each("tags", input.tags, validate_tag)
+/// // errors get paths like ["tags", "2", "name"]
+/// ```
+pub fn check_each(
+  field: String,
+  values: List(a),
+  validator_fn: fn(a) -> Validated(b),
+  next: fn(List(b)) -> Validated(c),
+) -> Validated(c) {
+  let #(validated_values, item_errors) =
+    values
+    |> list.index_map(fn(item, idx) {
+      let #(value, errors) = validator_fn(item)
+      let prefixed =
+        list.map(errors, fn(e) {
+          FieldError(
+            path: [field, int.to_string(idx), ..e.path],
+            message: e.message,
+          )
+        })
+      #(value, prefixed)
+    })
+    |> list.fold(#([], []), fn(acc, pair) {
+      let #(values_acc, errors_acc) = acc
+      let #(value, errors) = pair
+      #([value, ..values_acc], list.append(errors_acc, errors))
+    })
+  let validated_values = list.reverse(validated_values)
+  let #(result, outer_errors) = next(validated_values)
+  #(result, list.append(item_errors, outer_errors))
+}
+
+/// Cross-field validator comparing two already-validated values.
+/// On success, passes the (possibly transformed) first value to next.
+/// On failure, records a FieldError under `field` and passes `a` through
+/// so subsequent checks still run.
+///
+/// ```gleam
+/// use name <- sift.check("name", input.name, s.non_empty("required"))
+/// use confirm <- sift.check("confirm", input.confirm, s.non_empty("required"))
+/// use name <- sift.check2("confirm", name, confirm, fn(a, b) {
+///   case a == b { True -> Ok(a) False -> Error("must match name") }
+/// })
+/// sift.ok(name)
+/// ```
+pub fn check2(
+  field: String,
+  a: a,
+  b: b,
+  validator: fn(a, b) -> Result(a, String),
+  next: fn(a) -> Validated(c),
+) -> Validated(c) {
+  case validator(a, b) {
+    Ok(v) -> next(v)
+    Error(msg) -> {
+      let #(result, errors) = next(a)
+      #(result, [FieldError(path: [field], message: msg), ..errors])
+    }
+  }
+}
+
+/// Post-assembly whole-object check. Runs on a `Validated(a)` produced by
+/// `ok(...)`, useful for cross-field constraints expressed in terms of the
+/// final struct.
+///
+/// ```gleam
+/// sift.ok(Registration(role:, mfa:))
+/// |> sift.refine("mfa", fn(r) {
+///   case r.role == "admin" && r.mfa == None {
+///     True -> Error("required for admins")
+///     False -> Ok(r)
+///   }
+/// })
+/// |> sift.validate
+/// ```
+pub fn refine(
+  validated: Validated(a),
+  field: String,
+  check: fn(a) -> Result(a, String),
+) -> Validated(a) {
+  let #(value, errors) = validated
+  case check(value) {
+    Ok(v) -> #(v, errors)
+    Error(msg) -> #(
+      value,
+      list.append(errors, [FieldError(path: [field], message: msg)]),
+    )
   }
 }
 

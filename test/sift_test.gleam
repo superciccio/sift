@@ -433,6 +433,125 @@ pub fn each_invalid_indexed_paths_test() {
   assert_has_path(errors, ["tags", "3"])
 }
 
+// --- check_each ---
+
+pub fn check_each_valid_test() {
+  let validate_tag = fn(t: String) {
+    use name <- sift.check("name", t, s.non_empty("required"))
+    sift.ok(name)
+  }
+  let result = {
+    use tags <- sift.check_each("tags", ["a", "b"], validate_tag)
+    sift.ok(tags)
+  }
+  let assert Ok(["a", "b"]) = sift.validate(result)
+}
+
+pub fn check_each_indexed_nested_paths_test() {
+  let validate_tag = fn(t: String) {
+    use name <- sift.check("name", t, s.non_empty("required"))
+    sift.ok(name)
+  }
+  let result = {
+    use tags <- sift.check_each("tags", ["a", "", "b", ""], validate_tag)
+    sift.ok(tags)
+  }
+  let assert Error(errors) = sift.validate(result)
+  let assert 2 = length(errors)
+  assert_has_path(errors, ["tags", "1", "name"])
+  assert_has_path(errors, ["tags", "3", "name"])
+}
+
+pub fn check_each_preserves_value_on_failure_test() {
+  // When an item fails, the default (original) value should flow through
+  let validate_tag = fn(t: String) {
+    use name <- sift.check("name", t, s.non_empty("required"))
+    sift.ok(name)
+  }
+  let result = {
+    use tags <- sift.check_each("tags", ["a", "", "c"], validate_tag)
+    sift.ok(tags)
+  }
+  let #(value, _errors) = result
+  assert value == ["a", "", "c"]
+}
+
+// --- check2 ---
+
+pub fn check2_pass_test() {
+  let result = {
+    use name <- sift.check("name", "jo", s.non_empty("required"))
+    use confirm <- sift.check("confirm", "jo", s.non_empty("required"))
+    use name <- sift.check2("confirm", name, confirm, fn(a, b) {
+      case a == b {
+        True -> Ok(a)
+        False -> Error("must match")
+      }
+    })
+    sift.ok(name)
+  }
+  let assert Ok("jo") = sift.validate(result)
+}
+
+pub fn check2_fail_test() {
+  let result = {
+    use name <- sift.check("name", "jo", s.non_empty("required"))
+    use confirm <- sift.check("confirm", "no", s.non_empty("required"))
+    use name <- sift.check2("confirm", name, confirm, fn(a, b) {
+      case a == b {
+        True -> Ok(a)
+        False -> Error("must match")
+      }
+    })
+    sift.ok(name)
+  }
+  let assert Error([sift.FieldError(path: ["confirm"], message: "must match")]) =
+    sift.validate(result)
+}
+
+// --- refine ---
+
+pub fn refine_pass_test() {
+  let result =
+    sift.ok(#("admin", Some("mfa-token")))
+    |> sift.refine("mfa", fn(r) {
+      let #(role, mfa) = r
+      case role == "admin" && mfa == None {
+        True -> Error("required for admins")
+        False -> Ok(r)
+      }
+    })
+  let assert Ok(#("admin", Some("mfa-token"))) = sift.validate(result)
+}
+
+pub fn refine_fail_test() {
+  let result =
+    sift.ok(#("admin", None))
+    |> sift.refine("mfa", fn(r) {
+      let #(role, mfa) = r
+      case role == "admin" && mfa == None {
+        True -> Error("required for admins")
+        False -> Ok(r)
+      }
+    })
+  let assert Error([
+    sift.FieldError(path: ["mfa"], message: "required for admins"),
+  ]) = sift.validate(result)
+}
+
+pub fn refine_appends_after_field_errors_test() {
+  // refine errors should come after field errors
+  let result = {
+    use name <- sift.check("name", "", s.non_empty("required"))
+    sift.ok(name)
+  }
+  |> sift.refine("whole", fn(_) { Error("whole-object fail") })
+  let assert Error([
+    sift.FieldError(path: ["name"], message: "required"),
+    sift.FieldError(path: ["whole"], message: "whole-object fail"),
+  ]) = sift.validate(result)
+}
+
 fn assert_has_path(errors: List(sift.FieldError), path: List(String)) -> Nil {
   case errors {
     [] -> panic as "expected error with given path"

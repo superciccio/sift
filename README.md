@@ -26,12 +26,13 @@ pub type User {
   User(name: String, email: String, age: Int)
 }
 
-pub fn validate(input: UserInput) -> Result(User, List(sift.FieldError)) {
-  use name <- sift.check("name", input.name, s.min_length(1, "required"))
-  use email <- sift.check("email", input.email, s.email("invalid email"))
-  use age <- sift.check("age", input.age, i.between(0, 150, "out of range"))
-  sift.ok(User(name:, email:, age:))
-  |> sift.validate
+pub fn validate(input: UserInput) -> Result(User, List(sift.FieldError(String))) {
+  sift.validate({
+    use name <- sift.check("name", input.name, s.min_length(1, "required"))
+    use email <- sift.check("email", input.email, s.email("invalid email"))
+    use age <- sift.check("age", input.age, i.between(0, 150, "out of range"))
+    sift.ok(User(name:, email:, age:))
+  })
 }
 ```
 
@@ -40,11 +41,73 @@ Invalid input returns **all** errors at once:
 ```gleam
 validate(UserInput(name: "", email: "nope", age: -1))
 // -> Error([
-//   FieldError(path: ["name"], message: "required"),
-//   FieldError(path: ["email"], message: "invalid email"),
-//   FieldError(path: ["age"], message: "out of range"),
+//   FieldError(path: ["name"], error: "required"),
+//   FieldError(path: ["email"], error: "invalid email"),
+//   FieldError(path: ["age"], error: "out of range"),
 // ])
 ```
+
+## Upgrading from 0.1.x
+
+Errors used to always be text. Now you choose what an error is — text, an error
+code, an i18n key, whatever your app needs.
+
+If you want to keep using text, there are two edits.
+
+**1. Say `String` in your return type.**
+
+```gleam
+// before
+pub fn validate(input: UserInput) -> Result(User, List(sift.FieldError))
+
+// after
+pub fn validate(input: UserInput) -> Result(User, List(sift.FieldError(String)))
+```
+
+**2. Read `.error` instead of `.message`.**
+
+```gleam
+// before
+errors |> list.map(fn(e) { e.message })
+
+// after
+errors |> list.map(fn(e) { e.error })
+```
+
+That is the whole migration. Everything else — your `use` chains, `check`,
+`check_all`, `nested`, `ok`, `validate` — stays exactly as it was.
+
+### What you get
+
+Errors can now be your own type, and it flows through every validator and every
+field path:
+
+```gleam
+pub type Problem {
+  Required
+  TooShort(min: Int)
+  NotAnEmail
+}
+
+pub fn validate(input: UserInput) -> Result(User, List(sift.FieldError(Problem))) {
+  sift.validate({
+    use name <- sift.check("name", input.name, s.non_empty(Required))
+    use email <- sift.check("email", input.email, s.email(NotAnEmail))
+    use age <- sift.check("age", input.age, i.min(13, TooShort(13)))
+    sift.ok(User(name:, email:, age:))
+  })
+}
+
+validate(UserInput(name: "", email: "nope", age: 9))
+// -> Error([
+//   FieldError(path: ["name"], error: Required),
+//   FieldError(path: ["email"], error: NotAnEmail),
+//   FieldError(path: ["age"], error: TooShort(13)),
+// ])
+```
+
+The built-in validators work with any error type — `s.non_empty(Required)` is the
+same function as `s.non_empty("required")`.
 
 ## Realistic example
 
@@ -56,6 +119,7 @@ and per-item list validation with `each` — see
 ## Features
 
 - **Error accumulation** — every field is checked, every error is returned
+- **Your own error type** — messages, error codes, or i18n keys; the built-in validators work with all of them
 - **Field paths** — nested structs and lists produce paths like `["address", "zip"]` or `["tags", "0"]`
 - **Multi-validator** — `sift.check_all` runs multiple validators on one field, collects all errors
 - **Composable** — `sift.and`, `sift.or`, `sift.not` to combine validators

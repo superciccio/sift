@@ -13,11 +13,12 @@
 //// pub type User { User(name: String, email: String, age: Int) }
 ////
 //// pub fn validate_user(input: User) -> Result(User, List(sift.FieldError(String))) {
-////   use name <- sift.check("name", input.name, s.non_empty("required"))
-////   use email <- sift.check("email", input.email, s.email("invalid"))
-////   use age <- sift.check("age", input.age, i.between(0, 150, "out of range"))
-////   sift.ok(User(name:, email:, age:))
-////   |> sift.validate
+////   sift.validate({
+////     use name <- sift.check("name", input.name, s.non_empty("required"))
+////     use email <- sift.check("email", input.email, s.email("invalid"))
+////     use age <- sift.check("age", input.age, i.between(0, 150, "out of range"))
+////     sift.ok(User(name:, email:, age:))
+////   })
 //// }
 //// ```
 ////

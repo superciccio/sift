@@ -8,7 +8,7 @@ Schema validation for Gleam — constraints, error accumulation, and field paths
 All errors are collected in a single pass using the `use` pattern. No short-circuiting, no missing fields.
 
 ```sh
-gleam add sift@1
+gleam add sift
 ```
 
 ## Quick example

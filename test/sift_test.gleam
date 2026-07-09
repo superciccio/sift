@@ -28,7 +28,7 @@ pub fn check_invalid_test() {
     use name <- sift.check("name", "", s.non_empty("required"))
     sift.ok(name)
   }
-  let assert Error([sift.FieldError(path: ["name"], message: "required")]) =
+  let assert Error([sift.FieldError(path: ["name"], error: "required")]) =
     sift.validate(result)
 }
 
@@ -52,7 +52,7 @@ pub fn nested_prefixes_paths_test() {
     sift.ok(zip)
   }
   let assert Error([
-    sift.FieldError(path: ["address", "zip"], message: "must be 5 chars"),
+    sift.FieldError(path: ["address", "zip"], error: "must be 5 chars"),
   ]) = sift.validate(result)
 }
 
@@ -72,12 +72,13 @@ pub fn and_second_fails_test() {
 }
 
 pub fn custom_validator_test() {
-  let even = sift.custom(fn(n: Int) {
-    case n % 2 == 0 {
-      True -> Ok(n)
-      False -> Error("must be even")
-    }
-  })
+  let even =
+    sift.custom(fn(n: Int) {
+      case n % 2 == 0 {
+        True -> Ok(n)
+        False -> Error("must be even")
+      }
+    })
   let assert Ok(4) = even(4)
   let assert Error("must be even") = even(3)
 }
@@ -117,7 +118,7 @@ pub fn check_all_partial_fail_test() {
     ])
     sift.ok(name)
   }
-  let assert Error([sift.FieldError(path: ["name"], message: "too short")]) =
+  let assert Error([sift.FieldError(path: ["name"], error: "too short")]) =
     sift.validate(result)
 }
 
@@ -140,16 +141,24 @@ pub fn when_false_skips_test() {
 
 pub fn when_in_check_test() {
   let result = {
-    use state <- sift.check("state", "", sift.when(True, s.non_empty("required")))
+    use state <- sift.check(
+      "state",
+      "",
+      sift.when(True, s.non_empty("required")),
+    )
     sift.ok(state)
   }
-  let assert Error([sift.FieldError(path: ["state"], message: "required")]) =
+  let assert Error([sift.FieldError(path: ["state"], error: "required")]) =
     sift.validate(result)
 }
 
 pub fn when_false_in_check_test() {
   let result = {
-    use state <- sift.check("state", "", sift.when(False, s.non_empty("required")))
+    use state <- sift.check(
+      "state",
+      "",
+      sift.when(False, s.non_empty("required")),
+    )
     sift.ok(state)
   }
   let assert Ok("") = sift.validate(result)
@@ -159,7 +168,11 @@ pub fn when_false_in_check_test() {
 
 pub fn check_optional_none_skips_test() {
   let result = {
-    use nickname <- sift.check_optional("nickname", None, s.min_length(2, "too short"))
+    use nickname <- sift.check_optional(
+      "nickname",
+      None,
+      s.min_length(2, "too short"),
+    )
     sift.ok(nickname)
   }
   let assert Ok(None) = sift.validate(result)
@@ -167,7 +180,11 @@ pub fn check_optional_none_skips_test() {
 
 pub fn check_optional_some_valid_test() {
   let result = {
-    use nickname <- sift.check_optional("nickname", Some("Al"), s.min_length(2, "too short"))
+    use nickname <- sift.check_optional(
+      "nickname",
+      Some("Al"),
+      s.min_length(2, "too short"),
+    )
     sift.ok(nickname)
   }
   let assert Ok(Some("Al")) = sift.validate(result)
@@ -175,10 +192,14 @@ pub fn check_optional_some_valid_test() {
 
 pub fn check_optional_some_invalid_test() {
   let result = {
-    use nickname <- sift.check_optional("nickname", Some("A"), s.min_length(2, "too short"))
+    use nickname <- sift.check_optional(
+      "nickname",
+      Some("A"),
+      s.min_length(2, "too short"),
+    )
     sift.ok(nickname)
   }
-  let assert Error([sift.FieldError(path: ["nickname"], message: "too short")]) =
+  let assert Error([sift.FieldError(path: ["nickname"], error: "too short")]) =
     sift.validate(result)
 }
 
@@ -197,7 +218,7 @@ pub fn check_parse_invalid_test() {
     use age <- sift.check_parse("age", "abc", int.parse, 0, "must be a number")
     sift.ok(age)
   }
-  let assert Error([sift.FieldError(path: ["age"], message: "must be a number")]) =
+  let assert Error([sift.FieldError(path: ["age"], error: "must be a number")]) =
     sift.validate(result)
 }
 
@@ -230,9 +251,21 @@ pub fn check_parse_in_form_scenario_test() {
 
   let result = {
     use name <- sift.check("name", form_name, s.non_empty("required"))
-    use age <- sift.check_parse("age", form_age, int.parse, 0, "must be a number")
+    use age <- sift.check_parse(
+      "age",
+      form_age,
+      int.parse,
+      0,
+      "must be a number",
+    )
     use age <- sift.check("age", age, i.between(0, 150, "out of range"))
-    use score <- sift.check_parse("score", form_score, int.parse, 0, "must be a number")
+    use score <- sift.check_parse(
+      "score",
+      form_score,
+      int.parse,
+      0,
+      "must be a number",
+    )
     sift.ok(#(name, age, score))
   }
   let assert Error(errors) = sift.validate(result)
@@ -308,8 +341,10 @@ pub fn string_alpha_test() {
 
 pub fn string_alphanumeric_test() {
   let assert Ok("abc123") = s.alphanumeric("alphanumeric only")("abc123")
-  let assert Error("alphanumeric only") = s.alphanumeric("alphanumeric only")("abc 123")
-  let assert Error("alphanumeric only") = s.alphanumeric("alphanumeric only")("")
+  let assert Error("alphanumeric only") =
+    s.alphanumeric("alphanumeric only")("abc 123")
+  let assert Error("alphanumeric only") =
+    s.alphanumeric("alphanumeric only")("")
 }
 
 pub fn string_trimmed_test() {
@@ -364,7 +399,8 @@ pub fn int_negative_test() {
 pub fn int_divisible_by_test() {
   let assert Ok(9) = i.divisible_by(3, "must be divisible by 3")(9)
   let assert Ok(0) = i.divisible_by(3, "must be divisible by 3")(0)
-  let assert Error("must be divisible by 3") = i.divisible_by(3, "must be divisible by 3")(7)
+  let assert Error("must be divisible by 3") =
+    i.divisible_by(3, "must be divisible by 3")(7)
 }
 
 // --- Float ---
@@ -505,7 +541,7 @@ pub fn check2_fail_test() {
     })
     sift.ok(name)
   }
-  let assert Error([sift.FieldError(path: ["confirm"], message: "must match")]) =
+  let assert Error([sift.FieldError(path: ["confirm"], error: "must match")]) =
     sift.validate(result)
 }
 
@@ -535,24 +571,28 @@ pub fn refine_fail_test() {
       }
     })
   let assert Error([
-    sift.FieldError(path: ["mfa"], message: "required for admins"),
+    sift.FieldError(path: ["mfa"], error: "required for admins"),
   ]) = sift.validate(result)
 }
 
 pub fn refine_appends_after_field_errors_test() {
   // refine errors should come after field errors
-  let result = {
-    use name <- sift.check("name", "", s.non_empty("required"))
-    sift.ok(name)
-  }
-  |> sift.refine("whole", fn(_) { Error("whole-object fail") })
+  let result =
+    {
+      use name <- sift.check("name", "", s.non_empty("required"))
+      sift.ok(name)
+    }
+    |> sift.refine("whole", fn(_) { Error("whole-object fail") })
   let assert Error([
-    sift.FieldError(path: ["name"], message: "required"),
-    sift.FieldError(path: ["whole"], message: "whole-object fail"),
+    sift.FieldError(path: ["name"], error: "required"),
+    sift.FieldError(path: ["whole"], error: "whole-object fail"),
   ]) = sift.validate(result)
 }
 
-fn assert_has_path(errors: List(sift.FieldError), path: List(String)) -> Nil {
+fn assert_has_path(
+  errors: List(sift.FieldError(String)),
+  path: List(String),
+) -> Nil {
   case errors {
     [] -> panic as "expected error with given path"
     [first, ..rest] ->
@@ -626,7 +666,8 @@ pub fn equals_fails_test() {
 // --- String presets ---
 
 pub fn email_valid_test() {
-  let assert Ok("alice@example.com") = s.email("invalid email")("alice@example.com")
+  let assert Ok("alice@example.com") =
+    s.email("invalid email")("alice@example.com")
 }
 
 pub fn email_invalid_test() {
@@ -636,7 +677,8 @@ pub fn email_invalid_test() {
 }
 
 pub fn url_valid_test() {
-  let assert Ok("https://example.com") = s.url("invalid url")("https://example.com")
+  let assert Ok("https://example.com") =
+    s.url("invalid url")("https://example.com")
   let assert Ok("http://localhost:3000/path") =
     s.url("invalid url")("http://localhost:3000/path")
 }
@@ -653,7 +695,8 @@ pub fn uuid_valid_test() {
 
 pub fn uuid_invalid_test() {
   let assert Error("invalid uuid") = s.uuid("invalid uuid")("not-a-uuid")
-  let assert Error("invalid uuid") = s.uuid("invalid uuid")("550e8400-e29b-51d4-a716-446655440000")
+  let assert Error("invalid uuid") =
+    s.uuid("invalid uuid")("550e8400-e29b-51d4-a716-446655440000")
 }
 
 // --- Integration: full validation scenario ---

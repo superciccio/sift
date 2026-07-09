@@ -749,6 +749,126 @@ pub fn full_invalid_user_test() {
   let assert 3 = length(errors)
 }
 
+// --- Typed (non-string) errors ---
+
+pub type ValidationCode {
+  Required
+  TooShort(min: Int)
+  NotAnEmail
+  MustMatch
+  MfaRequiredForAdmins
+}
+
+pub fn typed_error_through_check_test() {
+  let result = {
+    use name <- sift.check("name", "", s.non_empty(Required))
+    sift.ok(name)
+  }
+  let assert Error([sift.FieldError(path: ["name"], error: Required)]) =
+    sift.validate(result)
+}
+
+pub fn typed_error_carries_payload_test() {
+  let result = {
+    use name <- sift.check("name", "ab", s.min_length(3, TooShort(3)))
+    sift.ok(name)
+  }
+  let assert Error([sift.FieldError(path: ["name"], error: TooShort(3))]) =
+    sift.validate(result)
+}
+
+pub fn typed_error_check_all_test() {
+  let result = {
+    use email <- sift.check_all("email", "", [
+      s.non_empty(Required),
+      s.email(NotAnEmail),
+    ])
+    sift.ok(email)
+  }
+  let assert Error(errors) = sift.validate(result)
+  let assert 2 = length(errors)
+}
+
+pub fn typed_error_through_nested_test() {
+  let validate_inner = fn(value: String) {
+    use v <- sift.check("zip", value, s.non_empty(Required))
+    sift.ok(v)
+  }
+  let result = {
+    use zip <- sift.nested("address", "", validate_inner)
+    sift.ok(zip)
+  }
+  let assert Error([sift.FieldError(path: ["address", "zip"], error: Required)]) =
+    sift.validate(result)
+}
+
+pub fn typed_error_through_check_each_indexed_paths_test() {
+  let validate_tag = fn(t: String) {
+    use name <- sift.check("name", t, s.non_empty(Required))
+    sift.ok(name)
+  }
+  let result = {
+    use tags <- sift.check_each("tags", ["a", "", "b", ""], validate_tag)
+    sift.ok(tags)
+  }
+  let assert Error(errors) = sift.validate(result)
+  let assert 2 = length(errors)
+  assert_has_typed_path(errors, ["tags", "1", "name"])
+  assert_has_typed_path(errors, ["tags", "3", "name"])
+}
+
+pub fn typed_error_through_check2_test() {
+  let result = {
+    use name <- sift.check("name", "jo", s.non_empty(Required))
+    use confirm <- sift.check("confirm", "no", s.non_empty(Required))
+    use name <- sift.check2("confirm", name, confirm, fn(a, b) {
+      case a == b {
+        True -> Ok(a)
+        False -> Error(MustMatch)
+      }
+    })
+    sift.ok(name)
+  }
+  let assert Error([sift.FieldError(path: ["confirm"], error: MustMatch)]) =
+    sift.validate(result)
+}
+
+pub fn typed_error_through_refine_test() {
+  let result =
+    sift.ok(#("admin", None))
+    |> sift.refine("mfa", fn(r) {
+      let #(role, mfa) = r
+      case role == "admin" && mfa == None {
+        True -> Error(MfaRequiredForAdmins)
+        False -> Ok(r)
+      }
+    })
+  let assert Error([sift.FieldError(path: ["mfa"], error: MfaRequiredForAdmins)]) =
+    sift.validate(result)
+}
+
+pub fn typed_error_not_needs_no_dummy_test() {
+  // `not` discards its inner validator's error, so the inner and outer error
+  // types are independent — no dummy value required.
+  let v = sift.not(s.contains("@", Nil), Required)
+  let assert Ok("hello") = v("hello")
+  let assert Error(Required) = v("a@b")
+}
+
+fn assert_has_typed_path(
+  errors: List(sift.FieldError(ValidationCode)),
+  path: List(String),
+) -> Nil {
+  case errors {
+    [] -> panic as "expected error with given path"
+    [first, ..rest] ->
+      case first.path == path {
+        True -> Nil
+        False -> assert_has_typed_path(rest, path)
+      }
+  }
+}
+
 fn length(items: List(a)) -> Int {
   case items {
     [] -> 0

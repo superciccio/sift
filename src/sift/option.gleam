@@ -9,7 +9,7 @@ import gleam/option.{type Option, None, Some}
 /// validator(Some("hello"))  // -> Ok("hello")
 /// validator(None)           // -> Error("field is required")
 /// ```
-pub fn required(msg: String) -> fn(Option(a)) -> Result(a, String) {
+pub fn required(msg: e) -> fn(Option(a)) -> Result(a, e) {
   fn(value) {
     case value {
       Some(v) -> Ok(v)
@@ -28,8 +28,8 @@ pub fn required(msg: String) -> fn(Option(a)) -> Result(a, String) {
 /// validator(Some("hi"))     // -> Error("too short")
 /// ```
 pub fn optional(
-  validator: fn(a) -> Result(a, String),
-) -> fn(Option(a)) -> Result(Option(a), String) {
+  validator: fn(a) -> Result(a, e),
+) -> fn(Option(a)) -> Result(Option(a), e) {
   fn(value) {
     case value {
       None -> Ok(None)

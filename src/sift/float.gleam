@@ -4,7 +4,7 @@ import gleam/float
 import gleam/order
 
 /// Value must be >= n
-pub fn min(n: Float, msg: String) -> fn(Float) -> Result(Float, String) {
+pub fn min(n: Float, msg: e) -> fn(Float) -> Result(Float, e) {
   fn(value) {
     case float.compare(value, n) {
       order.Lt -> Error(msg)
@@ -14,7 +14,7 @@ pub fn min(n: Float, msg: String) -> fn(Float) -> Result(Float, String) {
 }
 
 /// Value must be <= n
-pub fn max(n: Float, msg: String) -> fn(Float) -> Result(Float, String) {
+pub fn max(n: Float, msg: e) -> fn(Float) -> Result(Float, e) {
   fn(value) {
     case float.compare(value, n) {
       order.Gt -> Error(msg)
@@ -24,11 +24,7 @@ pub fn max(n: Float, msg: String) -> fn(Float) -> Result(Float, String) {
 }
 
 /// Value must be between lo and hi (inclusive)
-pub fn between(
-  lo: Float,
-  hi: Float,
-  msg: String,
-) -> fn(Float) -> Result(Float, String) {
+pub fn between(lo: Float, hi: Float, msg: e) -> fn(Float) -> Result(Float, e) {
   fn(value) {
     case float.compare(value, lo), float.compare(value, hi) {
       order.Lt, _ -> Error(msg)
@@ -39,7 +35,7 @@ pub fn between(
 }
 
 /// Value must be > 0.0
-pub fn positive(msg: String) -> fn(Float) -> Result(Float, String) {
+pub fn positive(msg: e) -> fn(Float) -> Result(Float, e) {
   fn(value) {
     case float.compare(value, 0.0) {
       order.Gt -> Ok(value)
@@ -55,7 +51,7 @@ pub fn positive(msg: String) -> fn(Float) -> Result(Float, String) {
 /// validator(0.0)   // -> Ok(0.0)
 /// validator(-0.1)  // -> Error("must be >= 0")
 /// ```
-pub fn non_negative(msg: String) -> fn(Float) -> Result(Float, String) {
+pub fn non_negative(msg: e) -> fn(Float) -> Result(Float, e) {
   fn(value) {
     case float.compare(value, 0.0) {
       order.Lt -> Error(msg)

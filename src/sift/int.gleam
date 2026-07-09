@@ -1,7 +1,7 @@
 //// Integer validators — range, positivity, and membership checks.
 
 /// Value must be >= n
-pub fn min(n: Int, msg: String) -> fn(Int) -> Result(Int, String) {
+pub fn min(n: Int, msg: e) -> fn(Int) -> Result(Int, e) {
   fn(value) {
     case value >= n {
       True -> Ok(value)
@@ -11,7 +11,7 @@ pub fn min(n: Int, msg: String) -> fn(Int) -> Result(Int, String) {
 }
 
 /// Value must be <= n
-pub fn max(n: Int, msg: String) -> fn(Int) -> Result(Int, String) {
+pub fn max(n: Int, msg: e) -> fn(Int) -> Result(Int, e) {
   fn(value) {
     case value <= n {
       True -> Ok(value)
@@ -27,7 +27,7 @@ pub fn max(n: Int, msg: String) -> fn(Int) -> Result(Int, String) {
 /// validator(50)   // -> Ok(50)
 /// validator(200)  // -> Error("out of range")
 /// ```
-pub fn between(lo: Int, hi: Int, msg: String) -> fn(Int) -> Result(Int, String) {
+pub fn between(lo: Int, hi: Int, msg: e) -> fn(Int) -> Result(Int, e) {
   fn(value) {
     case value >= lo && value <= hi {
       True -> Ok(value)
@@ -37,7 +37,7 @@ pub fn between(lo: Int, hi: Int, msg: String) -> fn(Int) -> Result(Int, String) 
 }
 
 /// Value must be > 0
-pub fn positive(msg: String) -> fn(Int) -> Result(Int, String) {
+pub fn positive(msg: e) -> fn(Int) -> Result(Int, e) {
   fn(value) {
     case value > 0 {
       True -> Ok(value)
@@ -47,7 +47,7 @@ pub fn positive(msg: String) -> fn(Int) -> Result(Int, String) {
 }
 
 /// Value must be >= 0
-pub fn non_negative(msg: String) -> fn(Int) -> Result(Int, String) {
+pub fn non_negative(msg: e) -> fn(Int) -> Result(Int, e) {
   fn(value) {
     case value >= 0 {
       True -> Ok(value)
@@ -57,7 +57,7 @@ pub fn non_negative(msg: String) -> fn(Int) -> Result(Int, String) {
 }
 
 /// Value must be one of the given values
-pub fn one_of(values: List(Int), msg: String) -> fn(Int) -> Result(Int, String) {
+pub fn one_of(values: List(Int), msg: e) -> fn(Int) -> Result(Int, e) {
   fn(value) {
     case list_contains(values, value) {
       True -> Ok(value)
@@ -73,7 +73,7 @@ pub fn one_of(values: List(Int), msg: String) -> fn(Int) -> Result(Int, String) 
 /// validator(-1)  // -> Ok(-1)
 /// validator(0)   // -> Error("must be negative")
 /// ```
-pub fn negative(msg: String) -> fn(Int) -> Result(Int, String) {
+pub fn negative(msg: e) -> fn(Int) -> Result(Int, e) {
   fn(value) {
     case value < 0 {
       True -> Ok(value)
@@ -89,7 +89,7 @@ pub fn negative(msg: String) -> fn(Int) -> Result(Int, String) {
 /// validator(9)  // -> Ok(9)
 /// validator(7)  // -> Error("must be divisible by 3")
 /// ```
-pub fn divisible_by(n: Int, msg: String) -> fn(Int) -> Result(Int, String) {
+pub fn divisible_by(n: Int, msg: e) -> fn(Int) -> Result(Int, e) {
   fn(value) {
     case value % n == 0 {
       True -> Ok(value)

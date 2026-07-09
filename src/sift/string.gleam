@@ -4,7 +4,7 @@ import gleam/regexp
 import gleam/string
 
 /// String must have at least n graphemes
-pub fn min_length(n: Int, msg: String) -> fn(String) -> Result(String, String) {
+pub fn min_length(n: Int, msg: e) -> fn(String) -> Result(String, e) {
   fn(value) {
     case string.length(value) >= n {
       True -> Ok(value)
@@ -14,7 +14,7 @@ pub fn min_length(n: Int, msg: String) -> fn(String) -> Result(String, String) {
 }
 
 /// String must have at most n graphemes
-pub fn max_length(n: Int, msg: String) -> fn(String) -> Result(String, String) {
+pub fn max_length(n: Int, msg: e) -> fn(String) -> Result(String, e) {
   fn(value) {
     case string.length(value) <= n {
       True -> Ok(value)
@@ -24,7 +24,7 @@ pub fn max_length(n: Int, msg: String) -> fn(String) -> Result(String, String) {
 }
 
 /// String must have exactly n graphemes
-pub fn length(n: Int, msg: String) -> fn(String) -> Result(String, String) {
+pub fn length(n: Int, msg: e) -> fn(String) -> Result(String, e) {
   fn(value) {
     case string.length(value) == n {
       True -> Ok(value)
@@ -34,7 +34,7 @@ pub fn length(n: Int, msg: String) -> fn(String) -> Result(String, String) {
 }
 
 /// String must not be empty (shorthand for min_length(1))
-pub fn non_empty(msg: String) -> fn(String) -> Result(String, String) {
+pub fn non_empty(msg: e) -> fn(String) -> Result(String, e) {
   min_length(1, msg)
 }
 
@@ -45,10 +45,7 @@ pub fn non_empty(msg: String) -> fn(String) -> Result(String, String) {
 /// validator("ABC")   // -> Ok("ABC")
 /// validator("abc")   // -> Error("must be 3 uppercase letters")
 /// ```
-pub fn matches(
-  pattern: String,
-  msg: String,
-) -> fn(String) -> Result(String, String) {
+pub fn matches(pattern: String, msg: e) -> fn(String) -> Result(String, e) {
   fn(value) {
     case regexp.from_string(pattern) {
       Ok(re) ->
@@ -68,10 +65,7 @@ pub fn matches(
 /// validator("admin")   // -> Ok("admin")
 /// validator("root")    // -> Error("invalid role")
 /// ```
-pub fn one_of(
-  values: List(String),
-  msg: String,
-) -> fn(String) -> Result(String, String) {
+pub fn one_of(values: List(String), msg: e) -> fn(String) -> Result(String, e) {
   fn(value) {
     case list_contains(values, value) {
       True -> Ok(value)
@@ -81,10 +75,7 @@ pub fn one_of(
 }
 
 /// String must start with the given prefix
-pub fn starts_with(
-  prefix: String,
-  msg: String,
-) -> fn(String) -> Result(String, String) {
+pub fn starts_with(prefix: String, msg: e) -> fn(String) -> Result(String, e) {
   fn(value) {
     case string.starts_with(value, prefix) {
       True -> Ok(value)
@@ -94,10 +85,7 @@ pub fn starts_with(
 }
 
 /// String must end with the given suffix
-pub fn ends_with(
-  suffix: String,
-  msg: String,
-) -> fn(String) -> Result(String, String) {
+pub fn ends_with(suffix: String, msg: e) -> fn(String) -> Result(String, e) {
   fn(value) {
     case string.ends_with(value, suffix) {
       True -> Ok(value)
@@ -107,10 +95,7 @@ pub fn ends_with(
 }
 
 /// String must contain the given substring
-pub fn contains(
-  substring: String,
-  msg: String,
-) -> fn(String) -> Result(String, String) {
+pub fn contains(substring: String, msg: e) -> fn(String) -> Result(String, e) {
   fn(value) {
     case string.contains(value, substring) {
       True -> Ok(value)
@@ -126,7 +111,7 @@ pub fn contains(
 /// validator("jo@example.com")  // -> Ok("jo@example.com")
 /// validator("nope")            // -> Error("invalid email")
 /// ```
-pub fn email(msg: String) -> fn(String) -> Result(String, String) {
+pub fn email(msg: e) -> fn(String) -> Result(String, e) {
   matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", msg)
 }
 
@@ -137,7 +122,7 @@ pub fn email(msg: String) -> fn(String) -> Result(String, String) {
 /// validator("https://example.com")  // -> Ok("https://example.com")
 /// validator("example.com")          // -> Error("invalid url")
 /// ```
-pub fn url(msg: String) -> fn(String) -> Result(String, String) {
+pub fn url(msg: e) -> fn(String) -> Result(String, e) {
   matches("^https?://[^\\s]+$", msg)
 }
 
@@ -148,7 +133,7 @@ pub fn url(msg: String) -> fn(String) -> Result(String, String) {
 /// validator("550e8400-e29b-41d4-a716-446655440000")  // -> Ok(..)
 /// validator("not-a-uuid")                            // -> Error("invalid uuid")
 /// ```
-pub fn uuid(msg: String) -> fn(String) -> Result(String, String) {
+pub fn uuid(msg: e) -> fn(String) -> Result(String, e) {
   matches(
     "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
     msg,
@@ -162,7 +147,7 @@ pub fn uuid(msg: String) -> fn(String) -> Result(String, String) {
 /// validator("123")   // -> Ok("123")
 /// validator("12a")   // -> Error("digits only")
 /// ```
-pub fn numeric(msg: String) -> fn(String) -> Result(String, String) {
+pub fn numeric(msg: e) -> fn(String) -> Result(String, e) {
   matches("^[0-9]+$", msg)
 }
 
@@ -173,7 +158,7 @@ pub fn numeric(msg: String) -> fn(String) -> Result(String, String) {
 /// validator("abc")   // -> Ok("abc")
 /// validator("abc1")  // -> Error("letters only")
 /// ```
-pub fn alpha(msg: String) -> fn(String) -> Result(String, String) {
+pub fn alpha(msg: e) -> fn(String) -> Result(String, e) {
   matches("^[a-zA-Z]+$", msg)
 }
 
@@ -184,7 +169,7 @@ pub fn alpha(msg: String) -> fn(String) -> Result(String, String) {
 /// validator("abc123")  // -> Ok("abc123")
 /// validator("abc 123") // -> Error("alphanumeric only")
 /// ```
-pub fn alphanumeric(msg: String) -> fn(String) -> Result(String, String) {
+pub fn alphanumeric(msg: e) -> fn(String) -> Result(String, e) {
   matches("^[a-zA-Z0-9]+$", msg)
 }
 
@@ -195,7 +180,7 @@ pub fn alphanumeric(msg: String) -> fn(String) -> Result(String, String) {
 /// validator("hello")   // -> Ok("hello")
 /// validator(" hello")  // -> Error("no surrounding spaces")
 /// ```
-pub fn trimmed(msg: String) -> fn(String) -> Result(String, String) {
+pub fn trimmed(msg: e) -> fn(String) -> Result(String, e) {
   fn(value) {
     case string.trim(value) == value {
       True -> Ok(value)

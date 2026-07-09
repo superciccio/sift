@@ -8,7 +8,13 @@ pub fn main() -> Nil {
 }
 
 fn valid_address() {
-  AddressInput(street: "123 Main St", city: "Springfield", zip: "62704", state: "IL", country: "US")
+  AddressInput(
+    street: "123 Main St",
+    city: "Springfield",
+    zip: "62704",
+    state: "IL",
+    country: "US",
+  )
 }
 
 fn valid_input() {
@@ -33,7 +39,13 @@ pub fn create_valid_contact_test() {
     phone: Some("555-1234"),
     website: None,
     tags: ["friend", "work"],
-    address: Address(street: "123 Main St", city: "Springfield", zip: "62704", state: "IL", country: "US"),
+    address: Address(
+      street: "123 Main St",
+      city: "Springfield",
+      zip: "62704",
+      state: "IL",
+      country: "US",
+    ),
   )) = contacts.create(valid_input())
 }
 
@@ -112,10 +124,19 @@ pub fn phone_too_short_test() {
 
 pub fn too_many_tags_test() {
   let input =
-    ContactInput(
-      ..valid_input(),
-      tags: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"],
-    )
+    ContactInput(..valid_input(), tags: [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+    ])
   let assert Error(errors) = contacts.create(input)
   assert_has_error(errors, ["tags"], "too many tags")
 }
@@ -134,8 +155,10 @@ pub fn phone_none_skips_validation_test() {
 }
 
 pub fn website_valid_test() {
-  let input = ContactInput(..valid_input(), website: Some("https://example.com"))
-  let assert Ok(Contact(website: Some("https://example.com"), ..)) = contacts.create(input)
+  let input =
+    ContactInput(..valid_input(), website: Some("https://example.com"))
+  let assert Ok(Contact(website: Some("https://example.com"), ..)) =
+    contacts.create(input)
 }
 
 pub fn website_none_skips_test() {
@@ -219,7 +242,13 @@ pub fn multiple_errors_accumulate_test() {
       phone: Some("x"),
       website: Some("nope"),
       tags: [""],
-      address: AddressInput(street: "", city: "", zip: "bad", state: "", country: "US"),
+      address: AddressInput(
+        street: "",
+        city: "",
+        zip: "bad",
+        state: "",
+        country: "US",
+      ),
     )
   let assert Error(errors) = contacts.create(input)
   // name, email(invalid), age, phone, website, tags[0], address.street, address.city,
@@ -236,12 +265,11 @@ pub fn update_also_validates_test() {
 // --- Helpers ---
 
 fn assert_has_error(
-  errors: List(sift.FieldError),
+  errors: List(sift.FieldError(String)),
   path: List(String),
   message: String,
 ) -> Nil {
-  let found =
-    list_any(errors, fn(e) { e.path == path && e.message == message })
+  let found = list_any(errors, fn(e) { e.path == path && e.error == message })
   case found {
     True -> Nil
     False -> {

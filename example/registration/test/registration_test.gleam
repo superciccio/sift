@@ -166,12 +166,11 @@ pub fn referral_code_alphanumeric_test() {
 // --- Helpers ---
 
 fn assert_has_error(
-  errors: List(sift.FieldError),
+  errors: List(sift.FieldError(String)),
   path: List(String),
   message: String,
 ) -> Nil {
-  let found =
-    list_any(errors, fn(e) { e.path == path && e.message == message })
+  let found = list_any(errors, fn(e) { e.path == path && e.error == message })
   case found {
     True -> Nil
     False -> {

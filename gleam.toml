@@ -2,7 +2,7 @@ name = "sift"
 version = "0.2.0"
 description = "Schema validation for Gleam — constraints, error accumulation, and field paths"
 licences = ["MIT"]
-repository = { type = "github", user = "superciccio", repo = "sift" }
+repository = { type = "github", user = "andbitty", repo = "sift" }
 
 [dependencies]
 gleam_stdlib = ">= 0.44.0 and < 2.0.0"

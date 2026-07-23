@@ -1,5 +1,5 @@
 name = "sift"
-version = "0.2.0"
+version = "0.2.1"
 description = "Schema validation for Gleam — constraints, error accumulation, and field paths"
 licences = ["MIT"]
 repository = { type = "github", user = "andbitty", repo = "sift" }
